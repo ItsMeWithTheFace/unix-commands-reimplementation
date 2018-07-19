@@ -1,6 +1,11 @@
 # CSCC69-A3
 Assignment 3 for CSCC69
 
+Contributors:
+- Rakin Uddin
+- Kareem Mohamed
+- Stephen Luc
+
 **Due**:August 7th 11:55 pm
 
 Introduction
