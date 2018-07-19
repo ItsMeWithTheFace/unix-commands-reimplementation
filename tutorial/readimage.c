@@ -92,13 +92,18 @@ int main(int argc, char **argv) {
     read(fd, bitmap, sizeof(struct ext2_dir_entry_2));
 
     struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (bitmap);
+		unsigned int size = 0;
 
-    char file_name[EXT2_NAME_LEN+1];
-    memcpy(file_name, de2->name, de2->name_len);
-    file_name[de2->name_len] = 0; 
-
-    printf("Inode: %d rec_len: %d name_len: %d type= %d name=%s\n", de2->inode, de2->rec_len, de2->name_len, de2->file_type, file_name);
+    while((size < in->i_size) && de2->inode) {
+			char file_name[EXT2_NAME_LEN];
+			memcpy(file_name, de2->name, de2->name_len);
+			file_name[de2->name_len] = 0;
+			printf("Inode: %d rec_len: %d name_len: %d type= %d name=%s\n", de2->inode, de2->rec_len, de2->name_len, de2->file_type, file_name);
+			de2 = (void*) de2 + de2->rec_len;
+			size += de2->rec_len;
+		}
     
+    printf("\n");
     return 0;
 }
 
