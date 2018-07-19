@@ -7,7 +7,10 @@
 #include <sys/mman.h>
 #include "ext2.h"
 
+
 unsigned char *disk;
+
+static unsigned int block_size;
 
 struct ext2_inode * read_inode(fd, inode_num, group_desc)
     int fd;
@@ -23,6 +26,38 @@ struct ext2_inode * read_inode(fd, inode_num, group_desc)
     in = (struct ext2_inode *) buffer;
 
     return in;
+}
+
+void print_dir_contents(fd, in) 
+    int fd;
+    const struct ext2_inode * in;
+{
+    void *block;
+    if (S_ISDIR(in->i_mode) && in->i_size > 0 && (i == 1 || i > 10)) {
+      if ((block = malloc(block_size)) == NULL) { /* allocate memory for the data block */
+        fprintf(stderr, "Memory error\n");
+        close(fd);
+        exit(1);
+      }
+
+      lseek(fd, 1024 + (in->i_block[0] - 1)*block_size, SEEK_SET);
+      read(fd, block, block_size);
+
+      struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (block);
+      int size = 0;
+      while(de2->inode) {
+        if (size == 0) {
+          printf("    DIR BLOCK NUM: %d (for inode %d)\n", num_blocks(in), i+1);
+        }
+        char file_name[EXT2_NAME_LEN];
+        memcpy(file_name, de2->name, de2->name_len);
+        file_name[de2->name_len] = 0;
+        printf("Inode: %d rec_len: %d name_len: %d type= %d name=%s\n", de2->inode, de2->rec_len, de2->name_len, de2->file_type, file_name);
+        de2 = (void*) de2 + de2->rec_len;
+        size += 1;
+      }
+      free(block);
+    }
 }
 
 int num_blocks(inode)
@@ -122,36 +157,10 @@ int main(int argc, char **argv) {
     
     printf("\nDirectory Blocks:\n");
 
-    unsigned int block_size = 1024 << sb->s_log_block_size;
+    block_size = 1024 << sb->s_log_block_size;
     for (int i = 1; i < sb->s_inodes_count; i++) {
       in = read_inode(fd, i, gd);
-      void *block;
-
-      if (S_ISDIR(in->i_mode) && in->i_size > 0 && (i == 1 || i > 10)) {
-        if ((block = malloc(block_size)) == NULL) { /* allocate memory for the data block */
-          fprintf(stderr, "Memory error\n");
-          close(fd);
-          exit(1);
-        }
-
-        lseek(fd, 1024 + (in->i_block[0] - 1)*block_size, SEEK_SET);
-        read(fd, block, block_size);
-
-        struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (block);
-        unsigned int size = 0;
-        while((size < in->i_size) && de2->inode) {
-          if (size == 0) {
-            printf("    DIR BLOCK NUM: %d (for inode %d)\n", num_blocks(in), i+1);
-          }
-          char file_name[EXT2_NAME_LEN];
-          memcpy(file_name, de2->name, de2->name_len);
-          file_name[de2->name_len] = 0;
-          printf("Inode: %d rec_len: %d name_len: %d type= %d name=%s\n", de2->inode, de2->rec_len, de2->name_len, de2->file_type, file_name);
-          de2 = (void*) de2 + de2->rec_len;
-          size += de2->rec_len;
-        }
-        free(block);
-      }
+      print_dir_contents(fd, in);
     }
     
     printf("\n");
