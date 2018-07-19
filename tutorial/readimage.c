@@ -25,6 +25,16 @@ struct ext2_inode * read_inode(fd, inode_num, group_desc)
     return in;
 }
 
+int num_blocks(inode)
+    const struct ext2_inode *inode;
+{
+    int num = 0;
+    for (int i = 0; i < 15; i++)
+        num += inode->i_block[i];
+
+    return num;
+}
+
 
 int main(int argc, char **argv) {
 
@@ -107,6 +117,7 @@ int main(int argc, char **argv) {
                 type = 's';
             
             printf("[%i] type: %c size: %d links: %d blocks: %d\n", i+1, type, in->i_size, in->i_links_count, in->i_blocks);
+            printf("Blocks: %d\n", num_blocks(in));
         }
     }
     
