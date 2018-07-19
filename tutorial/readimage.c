@@ -9,6 +9,22 @@
 
 unsigned char *disk;
 
+struct ext2_inode * read_inode(fd, inode_num, group_desc)
+    int fd;
+    int inode_num;
+    const struct ext2_group_desc *group_desc; 
+{
+    struct ext2_inode *in = malloc(sizeof(struct ext2_inode));
+    unsigned char *buffer = malloc(EXT2_BLOCK_SIZE);
+
+    lseek(fd, 1024 + (group_desc->bg_inode_table - 1)*1024 + inode_num*sizeof(struct ext2_inode), SEEK_SET);
+    read(fd, buffer, sizeof(struct ext2_inode));
+
+    in = (struct ext2_inode *) buffer;
+
+    return in;
+}
+
 int main(int argc, char **argv) {
 
     if(argc != 2) {
@@ -75,17 +91,23 @@ int main(int argc, char **argv) {
     }
     printf("\n");
 
-    printf("\nInodes: \n");
-    lseek(fd, 1024 + (gd->bg_inode_table - 1)*1024 + sizeof(struct ext2_inode), SEEK_SET);
-    read(fd, bitmap, sizeof(struct ext2_inode));
+    printf("Inodes: \n");
 
-    struct ext2_inode *in = (struct ext2_inode *) (bitmap);
-    char type = 'u';
-    if (S_ISDIR(in->i_mode))
-        type = 'd';
-    else if (S_ISREG(in->i_mode))
-        type = 'f';
-    printf("type: %c size: %d links: %d blocks: %d\n", type, in->i_size, in->i_links_count, in->i_blocks);
+    struct ext2_inode *in;
+    for (int i = 1; i < sb->s_inodes_count; i++) {
+        in = read_inode(fd, i, gd);
+        char type = 'u';
+        if ((S_ISDIR(in->i_mode) || S_ISREG(in->i_mode) || S_ISLNK(in->i_mode)) && in->i_size > 0 && (i == 1 || i > 10)) {
+            if (S_ISDIR(in->i_mode))
+                type = 'd';
+            else if (S_ISREG(in->i_mode))
+                type = 'f';
+            else if (S_ISLNK(in->i_mode))
+                type = 's';
+            
+            printf("[%i] type: %c size: %d links: %d blocks: %d\n", i+1, type, in->i_size, in->i_links_count, in->i_blocks);
+        }
+    }
     
     printf("\nDirectory Blocks:\n");
     lseek(fd, 1024 + (gd->bg_inode_table - 1)*1024 + sizeof(struct ext2_inode)*sb->s_inodes_count, SEEK_SET);
