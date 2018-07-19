@@ -9,11 +9,6 @@
 
 unsigned char *disk;
 
-struct ext2_inode read_inode(fd, inode_num, group_desc) {
-    return;
-}
-
-
 int main(int argc, char **argv) {
 
     if(argc != 2) {
@@ -80,7 +75,7 @@ int main(int argc, char **argv) {
     }
     printf("\n");
 
-    printf("Inodes: \n");
+    printf("\nInodes: \n");
     lseek(fd, 1024 + (gd->bg_inode_table - 1)*1024 + sizeof(struct ext2_inode), SEEK_SET);
     read(fd, bitmap, sizeof(struct ext2_inode));
 
@@ -92,8 +87,18 @@ int main(int argc, char **argv) {
         type = 'f';
     printf("type: %c size: %d links: %d blocks: %d\n", type, in->i_size, in->i_links_count, in->i_blocks);
     
+    printf("\nDirectory Blocks:\n");
+    lseek(fd, 1024 + (gd->bg_inode_table - 1)*1024 + sizeof(struct ext2_inode)*sb->s_inodes_count, SEEK_SET);
+    read(fd, bitmap, sizeof(struct ext2_dir_entry_2));
+
+    struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (bitmap);
+
+    char file_name[EXT2_NAME_LEN+1];
+    memcpy(file_name, de2->name, de2->name_len);
+    file_name[de2->name_len] = 0; 
+
+    printf("Inode: %d rec_len: %d name_len: %d type= %d name=%s\n", de2->inode, de2->rec_len, de2->name_len, de2->file_type, file_name);
+    
     return 0;
 }
-
-
 
