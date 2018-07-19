@@ -122,13 +122,22 @@ int main(int argc, char **argv) {
     
     printf("\nDirectory Blocks:\n");
 
+    unsigned int block_size = 1024 << sb->s_log_block_size;
     for (int i = 1; i < sb->s_inodes_count; i++) {
       in = read_inode(fd, i, gd);
-      if (S_ISDIR(in->i_mode) && in->i_size > 0 && (i == 1 || i > 10)) {
-        lseek(fd, 1024 + (gd->bg_inode_table - 1)*1024 + sizeof(struct ext2_inode)*sb->s_inodes_count, SEEK_SET);
-        read(fd, bitmap, sizeof(struct ext2_dir_entry_2));
+      void *block;
 
-        struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (bitmap);
+      if (S_ISDIR(in->i_mode) && in->i_size > 0 && (i == 1 || i > 10)) {
+        if ((block = malloc(block_size)) == NULL) { /* allocate memory for the data block */
+          fprintf(stderr, "Memory error\n");
+          close(fd);
+          exit(1);
+        }
+
+        lseek(fd, 1024 + (in->i_block[i] - 1)*1024, SEEK_SET);
+        read(fd, block, block_size);
+
+        struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (block);
         unsigned int size = 0;
         while((size < in->i_size) && de2->inode) {
           if (size == 0) {
@@ -141,6 +150,7 @@ int main(int argc, char **argv) {
           de2 = (void*) de2 + de2->rec_len;
           size += de2->rec_len;
         }
+        free(block);
       }
     }
     
