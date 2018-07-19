@@ -28,9 +28,10 @@ struct ext2_inode * read_inode(fd, inode_num, group_desc)
     return in;
 }
 
-void print_dir_contents(fd, in) 
+void print_dir_contents(fd, in, i) 
     int fd;
     const struct ext2_inode * in;
+    int i;
 {
     void *block;
     if (S_ISDIR(in->i_mode) && in->i_size > 0 && (i == 1 || i > 10)) {
@@ -160,7 +161,7 @@ int main(int argc, char **argv) {
     block_size = 1024 << sb->s_log_block_size;
     for (int i = 1; i < sb->s_inodes_count; i++) {
       in = read_inode(fd, i, gd);
-      print_dir_contents(fd, in);
+      print_dir_contents(fd, in, i);
     }
     
     printf("\n");
