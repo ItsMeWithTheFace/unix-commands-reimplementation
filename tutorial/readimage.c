@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
           exit(1);
         }
 
-        lseek(fd, 1024 + (in->i_block[i] - 1)*1024, SEEK_SET);
+        lseek(fd, 1024 + (in->i_block[0] - 1)*block_size, SEEK_SET);
         read(fd, block, block_size);
 
         struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (block);
