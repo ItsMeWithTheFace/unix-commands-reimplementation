@@ -36,7 +36,7 @@ void read_dir_contents(int fd, const struct NamedInode *ni, int dot_flag) {
             memcpy(curr_file, dir_entry->name, dir_entry->name_len);
             curr_file[dir_entry->name_len] = 0;
             if (strncmp(".", curr_file, 1) == 0) {  // ignore dot directories
-                if (dot_flag == 0)
+                if (dot_flag == 1)
                     printf("%s\n", curr_file);
             } else {
                 printf("%s\n", curr_file);
