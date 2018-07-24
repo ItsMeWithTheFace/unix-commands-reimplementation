@@ -14,6 +14,11 @@ int fd;
 struct ext2_super_block *sb;
 struct ext2_group_desc *gd;
 
+/**
+ * Opens an image, maps the disk data into disk and returns the file descriptor
+ * pointing to the open image.
+ * 
+**/
 int get_file_descriptor(const char *image) {
     fd = open(image, O_RDWR);
 
@@ -31,6 +36,10 @@ int get_file_descriptor(const char *image) {
     return fd;
 }
 
+/**
+ * Retrieves the full inode of an inode with the number inode_num.
+ * 
+**/
 struct ext2_inode * get_inode(int fd, int inode_num, const struct ext2_group_desc *group_desc) {
     struct ext2_inode *in = malloc(sizeof(struct ext2_inode));
     unsigned char *buffer = malloc(EXT2_BLOCK_SIZE);
@@ -43,6 +52,11 @@ struct ext2_inode * get_inode(int fd, int inode_num, const struct ext2_group_des
     return in;
 }
 
+/**
+ * Given a directory inode (an inode where S_ISDIR(inode->i_mode) == 1), finds
+ * the inode with name == file_name and returns it. Returns NULL if not found.
+ * 
+**/
 struct ext2_inode * find_in_dir(int fd, struct ext2_inode *dir_inode, char *file_name) {
     void *block;
     char curr_file[EXT2_NAME_LEN];
@@ -73,10 +87,17 @@ struct ext2_inode * find_in_dir(int fd, struct ext2_inode *dir_inode, char *file
     return NULL;
 }
 
-struct ext2_inode * traverse_path(int fd, char *path) {
+/**
+ * Traverses through an absolute path in an image. Returns the last
+ * inode that was met in the traversal along with the name. Returns NULL
+ * for invalid paths.
+ * 
+**/
+struct NamedInode * traverse_path(int fd, char *path) {
     gd = (struct ext2_group_desc *) (disk + 2*EXT2_BLOCK_SIZE);
     struct ext2_inode *curr_inode = get_inode(fd, EXT2_ROOT_INO, gd);
 
+    char *prev_file_name;
     char *file_name = strtok(path, "/");
     while (file_name) {
         // check if curr_inode is a directory, else return error
@@ -86,14 +107,17 @@ struct ext2_inode * traverse_path(int fd, char *path) {
         }
         // search for inode with file_name and that becomes curr_inode
         curr_inode = find_in_dir(fd, curr_inode, file_name);
-        if (curr_inode == NULL) {
+        if (!curr_inode) {
             fprintf(stderr, "No such file or directory\n");
             return NULL;
         }
+        // save the old name for back-tracking purposes
+        prev_file_name = file_name;
         file_name = strtok(NULL, "/");
     }
-    // If we're out of the loop, we entered a directory and finished traversing; print out contents
-    // /home/usr/file
+    // If we're out of the loop, we entered a directory/file and finished traversing;
 
-    return curr_inode;
+    struct NamedInode ni = {prev_file_name, curr_inode};
+    struct NamedInode * ni_p = &ni;
+    return ni_p;
 }
