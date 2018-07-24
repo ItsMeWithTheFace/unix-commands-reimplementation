@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 #include <sys/mman.h>
 #include "ext2.h"
 
@@ -11,6 +12,18 @@
 unsigned char *disk;
 
 static unsigned int block_size;
+
+int get_file_descriptor(const char *image) {
+    int fd = open(image, O_RDWR);
+
+    disk = mmap(NULL, 128 * 1024, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if(disk == MAP_FAILED) {
+        perror("mmap");
+        exit(1);
+    }
+
+    return fd;
+}
 
 struct ext2_inode * read_inode(fd, inode_num, group_desc)
     int fd;
@@ -26,6 +39,16 @@ struct ext2_inode * read_inode(fd, inode_num, group_desc)
     in = (struct ext2_inode *) buffer;
 
     return in;
+}
+
+int num_blocks(inode)
+    const struct ext2_inode *inode;
+{
+    int num = 0;
+    for (int i = 0; i < 15; i++)
+        num += inode->i_block[i];
+
+    return num;
 }
 
 void print_dir_contents(fd, in, i) 
@@ -61,15 +84,6 @@ void print_dir_contents(fd, in, i)
     }
 }
 
-int num_blocks(inode)
-    const struct ext2_inode *inode;
-{
-    int num = 0;
-    for (int i = 0; i < 15; i++)
-        num += inode->i_block[i];
-
-    return num;
-}
 
 int main(int argc, char **argv) {
 
@@ -77,14 +91,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Usage: readimg <image file name>\n");
         exit(1);
     }
-    int fd = open(argv[1], O_RDWR);
-    int i;
 
-    disk = mmap(NULL, 128 * 1024, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if(disk == MAP_FAILED) {
-	perror("mmap");
-	exit(1);
-    }
+    int fd = get_file_descriptor(argv[1]);
+    int i;
 
     struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
     printf("Inodes: %d\n", sb->s_inodes_count);
@@ -149,7 +158,7 @@ int main(int argc, char **argv) {
             else if (S_ISREG(in->i_mode))
                 type = 'f';
             else if (S_ISLNK(in->i_mode))
-                type = 's';
+                type = 'l';
             
             printf("[%i] type: %c size: %d links: %d blocks: %d\n", i+1, type, in->i_size, in->i_links_count, in->i_blocks);
             printf("Blocks: %d\n", num_blocks(in));
