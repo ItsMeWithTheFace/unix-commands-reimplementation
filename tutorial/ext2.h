@@ -22,6 +22,8 @@
 
 #define EXT2_BLOCK_SIZE 1024
 
+#define EXT2_BLOCK_OFFSET(block) (EXT2_BLOCK_SIZE + (block - 1)*EXT2_BLOCK_SIZE)
+
 /*
  * Structure of the super block
  */
