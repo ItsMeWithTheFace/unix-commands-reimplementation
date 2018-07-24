@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     if (inode)
         read_dir_contents(fd, inode, dot_flag);
     else
-        return 1;
+        return ENOENT;
 
     return 0;
 }
