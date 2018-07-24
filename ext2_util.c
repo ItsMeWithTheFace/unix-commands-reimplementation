@@ -60,6 +60,8 @@ struct ext2_inode * get_inode(int fd, int inode_num, const struct ext2_group_des
 struct ext2_inode * find_in_dir(int fd, struct ext2_inode *dir_inode, char *file_name) {
     void *block;
     char curr_file[EXT2_NAME_LEN];
+    unsigned int size = 0;
+
     sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
     unsigned int block_size = EXT2_BLOCK_SIZE << sb->s_log_block_size;
 
@@ -73,14 +75,16 @@ struct ext2_inode * find_in_dir(int fd, struct ext2_inode *dir_inode, char *file
 
     struct ext2_dir_entry_2 *dir_entry = (struct ext2_dir_entry_2 *) (block);
 
-    while(dir_entry->inode) {
+    while((size < dir_inode->i_size) && dir_entry->inode) {
         memcpy(curr_file, dir_entry->name, dir_entry->name_len);
         curr_file[dir_entry->name_len] = 0;
         if (strcasecmp(file_name, curr_file) == 0) {
             free(block);
             return get_inode(fd, dir_entry->inode, gd);
         }
+
         dir_entry = (void *) dir_entry + dir_entry->rec_len;
+        size += dir_entry->rec_len;
     }
 
     free(block);
