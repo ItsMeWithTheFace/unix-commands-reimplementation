@@ -146,7 +146,7 @@ struct ext2_inode * get_inode(int inode_num, const struct ext2_group_desc *group
  * the inode with name == file_name and returns it. Returns NULL if not found.
  * 
 **/
-struct ext2_inode * find_in_dir(struct ext2_inode *dir_inode, char *file_name) {
+struct NamedInode * find_in_dir(struct ext2_inode *dir_inode, char *file_name) {
     char curr_file[EXT2_NAME_LEN];
     unsigned int size = 0;
 
@@ -160,7 +160,10 @@ struct ext2_inode * find_in_dir(struct ext2_inode *dir_inode, char *file_name) {
                 memcpy(curr_file, dir_entry->name, dir_entry->name_len);
                 curr_file[dir_entry->name_len] = 0;
                 if (strcasecmp(file_name, curr_file) == 0) {
-                    return get_inode(dir_entry->inode, gd);
+                    struct ext2_inode * inode = get_inode(dir_entry->inode, gd);
+                    struct NamedInode ni = {dir_entry->inode, curr_file, inode};
+                    struct NamedInode *ni_p = &ni;
+                    return ni_p;
                 }
 
                 dir_entry = (void *) dir_entry + dir_entry->rec_len;
@@ -179,18 +182,20 @@ struct ext2_inode * find_in_dir(struct ext2_inode *dir_inode, char *file_name) {
 **/
 struct NamedInode * traverse_path(char *path) {
     struct ext2_inode *curr_inode = get_inode(EXT2_ROOT_INO, gd);
-
+    struct NamedInode *curr_ni = find_in_dir(curr_inode, ".");
+    
     char *prev_file_name;
     char *file_name = strtok(path, "/");
     while (file_name) {
         // check if curr_inode is a directory, else return error
-        if (!S_ISDIR(curr_inode->i_mode)) {
+        if (!S_ISDIR(curr_ni->inode->i_mode)) {
             fprintf(stderr, "No such file or directory\n");
             return NULL;
         }
         // search for inode with file_name and that becomes curr_inode
-        curr_inode = find_in_dir(curr_inode, file_name);
-        if (!curr_inode) {
+        curr_ni = find_in_dir(curr_inode, file_name);
+        curr_inode = get_inode(curr_ni->inode_num, gd);
+        if (!curr_ni) {
             fprintf(stderr, "No such file or directory\n");
             return NULL;
         }
@@ -200,9 +205,7 @@ struct NamedInode * traverse_path(char *path) {
     }
     // If we're out of the loop, we entered a directory/file and finished traversing;
 
-    struct NamedInode ni = {prev_file_name, curr_inode};
-    struct NamedInode * ni_p = &ni;
-    return ni_p;
+    return curr_ni;
 }
 
 /**
@@ -350,4 +353,7 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
 
 //     return 0;
 // }
+
+// /asd/qwe/asd new_dir
+
 

@@ -14,6 +14,7 @@ extern unsigned int block_size;
 
 // This struct allows us to keep the name of the inode we're looking at
 struct NamedInode {
+    int inode_num;
     char *name;
     struct ext2_inode *inode;
 };
@@ -21,7 +22,7 @@ struct NamedInode {
 extern void initialize_disk(const char *image);
 
 extern struct ext2_inode * get_inode(int inode_num, const struct ext2_group_desc *group_desc);
-extern struct ext2_inode * find_in_dir(struct ext2_inode *dir_inode, char *file_name);
+extern struct NamedInode * find_in_dir(struct ext2_inode *dir_inode, char *file_name);
 extern struct NamedInode * traverse_path(char *path);
 extern int insert_inode(int inode_type);
 extern struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int inode_num, char *name, int file_type);
