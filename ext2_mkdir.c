@@ -45,6 +45,11 @@ int main(int argc, char **argv) {
     struct NamedInode *dir_p = NULL;
     struct NamedInode dir;  // need to turn it into struct to maintain persistent data
 
+    if (argc < 3) {
+        fprintf(stderr, "Usage: ext2_mkdir IMAGE_FILE ABSOLUTE_PATH\n");
+        return 1;
+    }
+
     initialize_disk(argv[1]);
     struct PathTuple location = parse_directory_path(argv[2]);
     dir_p = traverse_path(location.path);
