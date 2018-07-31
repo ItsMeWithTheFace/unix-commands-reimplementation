@@ -164,8 +164,8 @@ struct NamedInode * find_in_dir(struct ext2_inode *dir_inode, char *file_name) {
                     return ni_p;
                 }
 
-                dir_entry = (void *) dir_entry + dir_entry->rec_len;
                 size += dir_entry->rec_len;
+                dir_entry = (void *) dir_entry + dir_entry->rec_len;
             }
         }
     }
@@ -175,35 +175,37 @@ struct NamedInode * find_in_dir(struct ext2_inode *dir_inode, char *file_name) {
 
 /**
  * Traverses through an absolute path in an image. Returns the last
- * inode that was met in the traversal along with the name. Returns NULL
+ * inode that was met in the traversal along with the name. Exits
  * for invalid paths.
 **/
 struct NamedInode * traverse_path(char *path) {
     struct ext2_inode *curr_inode = get_inode(EXT2_ROOT_INO, gd);
-    struct NamedInode *curr_ni = find_in_dir(curr_inode, ".");
-    
+    struct NamedInode *curr_ni_p = find_in_dir(curr_inode, ".");
+    struct NamedInode curr_ni = *curr_ni_p;
+
     char *prev_file_name;
     char *file_name = strtok(path, "/");
     while (file_name) {
         // check if curr_inode is a directory, else return error
-        if (!S_ISDIR(curr_ni->inode->i_mode)) {
+        if (!S_ISDIR(curr_ni.inode->i_mode)) {
             fprintf(stderr, "No such file or directory\n");
-            return NULL;
+            exit(ENOENT);
         }
         // search for inode with file_name and that becomes curr_inode
-        curr_ni = find_in_dir(curr_inode, file_name);
-        curr_inode = get_inode(curr_ni->inode_num, gd);
-        if (!curr_ni) {
+        curr_ni_p = find_in_dir(curr_inode, file_name);
+        if (!curr_ni_p) {
             fprintf(stderr, "No such file or directory\n");
-            return NULL;
+            exit(ENOENT);
         }
+        curr_ni = *curr_ni_p;
+        curr_inode = get_inode(curr_ni.inode_num, gd);
         // save the old name for back-tracking purposes
         prev_file_name = file_name;
         file_name = strtok(NULL, "/");
     }
     // If we're out of the loop, we entered a directory/file and finished traversing;
-
-    return curr_ni;
+    curr_ni_p = &curr_ni;
+    return curr_ni_p;
 }
 
 /**
@@ -304,6 +306,7 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
                         return new_de2;
                     }
                 }
+
                 size += de2->rec_len;
                 de2 = (void *) de2 + de2->rec_len;
             }
@@ -329,7 +332,7 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
                 de2->inode = inode_num;
                 strcpy(de2->name, name);
                 de2->name_len = strlen(name);
-                de2->file_type = TYPE_DIR;
+                de2->file_type = file_type;
                 de2->rec_len = EXT2_BLOCK_SIZE;
 
                 return new_de2;
