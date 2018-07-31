@@ -292,18 +292,23 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
                     // see if we can shorten the rec_len of current dir_entry
                     // and insert it there
                     int real_rec_len = pad_rec_len(de2->name);
+                    
                     if (rec_len <= (de2->rec_len - real_rec_len)) {
                         de2->rec_len = real_rec_len;
-
                         size += de2->rec_len;
                         de2 = (void *) de2 + de2->rec_len;
                         
-                        int new_entry_rec_len = EXT2_BLOCK_SIZE - size;
-                        struct ext2_dir_entry_2 *new_de2 = initialize_dir_entry(de2, inode_num, name, file_type, new_entry_rec_len);
+                        // this is here to solve some weird edge case of adding a dir entry
+                        // at the end where the last element is a file (weird shit happening)
+                        // NEED TO FIX LATER
+                        if (de2->inode == 0) {
+                            int new_entry_rec_len = EXT2_BLOCK_SIZE - size;
+                            struct ext2_dir_entry_2 *new_de2 = initialize_dir_entry(de2, inode_num, name, file_type, new_entry_rec_len);
 
-                        dir_inode->i_links_count++;
+                            dir_inode->i_links_count++;
 
-                        return new_de2;
+                            return new_de2;
+                        }
                     }
                 }
 
