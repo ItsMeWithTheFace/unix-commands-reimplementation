@@ -47,8 +47,6 @@ void initialize_disk(const char *image) {
 
     // initialize the superblock, group descriptor and other stuff
     init_fs_essentials();
-
-    printf("gd: %i\n", gd->bg_free_blocks_count);
 }
 
 /**
@@ -271,7 +269,6 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
     int size;
     unsigned int block_num;
 
-    printf("heythere\n");
     // go through the i_block array to find the allocated spaces
     for (int i = 0; i < 12; i++) {
         if (dir_inode->i_block[i] != 0) {
@@ -345,15 +342,10 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
     exit(ENOSPC);
 }
 
-// int main(int argc, char **argv) {
-//     initialize_disk(argv[1]);
-//     struct ext2_inode *root = get_inode(EXT2_ROOT_INO, gd);
-//     int node_num = insert_inode(TYPE_DIR);
-//     create_new_dir_entry(root, node_num, "hi", TYPE_DIR);
-
-//     return 0;
-// }
-
-// /asd/qwe/asd new_dir
-
-
+/**
+ * Checks if a file/folder already exists in a directory
+**/
+int check_exists(struct ext2_inode * dir_inode, char *name) {
+    struct NamedInode *found = find_in_dir(dir_inode, name);
+    return (!found) ? 0 : 1;
+}

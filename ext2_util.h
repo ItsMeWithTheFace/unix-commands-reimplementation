@@ -12,7 +12,7 @@ extern struct ext2_super_block *sb;
 extern struct ext2_group_desc *gd;
 extern unsigned int block_size;
 
-// This struct allows us to keep the name of the inode we're looking at
+// This struct allows us to keep some metadata of the inode we're looking at
 struct NamedInode {
     int inode_num;
     char *name;
@@ -26,3 +26,4 @@ extern struct NamedInode * find_in_dir(struct ext2_inode *dir_inode, char *file_
 extern struct NamedInode * traverse_path(char *path);
 extern int insert_inode(int inode_type);
 extern struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int inode_num, char *name, int file_type);
+extern int check_exists(struct ext2_inode * dir_inode, char *name);
