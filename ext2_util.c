@@ -357,3 +357,19 @@ int check_exists(struct ext2_inode * dir_inode, char *name) {
     struct NamedInode *found = find_in_dir(dir_inode, name);
     return (!found) ? 0 : 1;
 }
+
+void add_inode_block(struct ext2_inode *inode, int block_num) {
+    for (int i = 0; i < 12; i++) {
+        if (inode->i_block[i] == 0) {
+            inode->i_block[i] = block_num;
+            inode->i_blocks = inode->i_blocks / (2 << sb->s_log_block_size);
+
+            inode->i_size += EXT2_BLOCK_SIZE;
+
+            return;
+        }
+    }
+
+    exit(ENOSPC);
+}
+

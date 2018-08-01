@@ -27,3 +27,6 @@ extern struct NamedInode * traverse_path(char *path);
 extern int insert_inode(int inode_type);
 extern struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int inode_num, char *name, int file_type);
 extern int check_exists(struct ext2_inode * dir_inode, char *name);
+extern int allocate_inode();
+extern int allocate_block();
+extern void add_inode_block(struct ext2_inode *inode, int block_num);
