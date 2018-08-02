@@ -232,8 +232,8 @@ int insert_inode(int inode_type) {
         memset(new_inode, 0, sizeof(struct ext2_inode));
 
         new_inode->i_mode |= get_inode_type(inode_type);
-        new_inode->i_blocks = 0;
-        new_inode->i_links_count = 0;
+        new_inode->i_blocks = 2;
+        new_inode->i_links_count = 1;
         new_inode->i_size = sizeof(struct ext2_inode);
 
         int time = get_current_time();
@@ -362,9 +362,7 @@ void add_inode_block(struct ext2_inode *inode, int block_num) {
     for (int i = 0; i < 12; i++) {
         if (inode->i_block[i] == 0) {
             inode->i_block[i] = block_num;
-            inode->i_blocks = inode->i_blocks / (2 << sb->s_log_block_size);
-
-            inode->i_size += EXT2_BLOCK_SIZE;
+            //inode->i_blocks = inode->i_blocks / (2 << sb->s_log_block_size);
 
             return;
         }
