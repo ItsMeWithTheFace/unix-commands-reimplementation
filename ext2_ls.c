@@ -13,42 +13,41 @@
  * Prints the contents of a directory or just the name of a file/symlink.
  * Can specify whether to not print folders beginning with dots (.) using
  * the dot_flag parameter.
- * 
 **/
-void read_dir_contents(int fd, const struct NamedInode *ni, int dot_flag) {
-    void *block;
+void read_dir_contents(struct NamedInode *ni, int dot_flag) {
+    struct ext2_dir_entry_2 *dir_entry = NULL;
+    struct NamedInode ni_d = *ni;
+    int block_num;
     char curr_file[EXT2_NAME_LEN];
-    unsigned int size = 0;
+    int size = 0;
 
-    if ((block = malloc(EXT2_BLOCK_SIZE)) == NULL) { /* allocate memory for the data block */
-        perror("Memory error\n");
-        exit(1);
-    }
+    for (int i = 0; i < 12; i++) {
+        // if a block is occupied, read it
+        if (ni_d.inode->i_block[i] != 0) {
+            block_num = ni_d.inode->i_block[i];
 
-    lseek(fd, EXT2_BLOCK_OFFSET(ni->inode->i_block[0]), SEEK_SET);
-    read(fd, block, EXT2_BLOCK_SIZE);
+            if (S_ISREG(ni_d.inode->i_mode) || S_ISLNK(ni_d.inode->i_mode)) {
+                printf("%s\n", ni->name);
+            } else if (S_ISDIR(ni_d.inode->i_mode)) {
+                dir_entry = (struct ext2_dir_entry_2 *) (disk + EXT2_BLOCK_SIZE * block_num);
 
-    struct ext2_dir_entry_2 *dir_entry = (struct ext2_dir_entry_2 *) (block);
+                while((size < ni_d.inode->i_size) && dir_entry->inode) {
+                    memcpy(curr_file, dir_entry->name, dir_entry->name_len);
+                    curr_file[dir_entry->name_len] = 0;
 
-    if (S_ISREG(ni->inode->i_mode) || S_ISLNK(ni->inode->i_mode)){
-        printf("%s\n", ni->name);
-    } else if (S_ISDIR(ni->inode->i_mode)) {
-        while((size < ni->inode->i_size) && dir_entry->inode) {
-            memcpy(curr_file, dir_entry->name, dir_entry->name_len);
-            curr_file[dir_entry->name_len] = 0;
-            if (strncmp(".", curr_file, 1) == 0) {  // ignore dot directories
-                if (dot_flag == 1)
-                    printf("%s\n", curr_file);
-            } else {
-                printf("%s\n", curr_file);
+                    if (strncmp(".", curr_file, 1) == 0) {  // ignore dot directories unless dot_flag
+                        if (dot_flag == 1)
+                            printf("%s\n", curr_file);
+                    } else {
+                        printf("%s\n", curr_file);
+                    }
+
+                    size += dir_entry->rec_len;
+                    dir_entry = (void *) dir_entry + dir_entry->rec_len;
+                }
             }
-            dir_entry = (void *) dir_entry + dir_entry->rec_len;
-
-            size += dir_entry->rec_len;
         }
     }
-    
-    free(block);
 }
 
 int main(int argc, char **argv) {
@@ -66,12 +65,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    int fd = get_file_descriptor(argv[optind]);
-    struct NamedInode *inode = traverse_path(fd, argv[optind + 1]);
-    if (inode)
-        read_dir_contents(fd, inode, dot_flag);
-    else
-        return ENOENT;
+    initialize_disk(argv[optind]);
+    struct NamedInode *inode = traverse_path(argv[optind + 1]);
+    read_dir_contents(inode, dot_flag);
 
     return 0;
 }
