@@ -7,39 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "ext2.h"
-#include "ext2_mkdir.h"
 #include "ext2_util.h"
-
-
-/**
- * Splits an absolute path and returns a PathTuple. This contains
- * the absolute path of the directory we want to insert into
- * (PathTuple.path) and the name of the new directory (PathTuple.dir_name)
-**/
-struct PathTuple parse_directory_path(char *path) {
-    char *new_dir_name = malloc(strlen(path) + 1);
-    char *parsed_path = malloc(strlen(path) + 1);
-
-    char *token = strtok(path, "/");
-
-    while (token) {
-        strcat(parsed_path, "/");
-        strcat(parsed_path, token);
-        strcpy(new_dir_name, token);
-        token = strtok(NULL, "/");
-    }
-
-    char *new_parsed_path = malloc(strlen(parsed_path) - strlen(new_dir_name));
-    strncpy(new_parsed_path, parsed_path, strlen(parsed_path) - strlen(new_dir_name) - 1);
-
-    if (strcmp(new_parsed_path, "") == 0) {
-        strcpy(new_parsed_path, "/");
-    }
-
-    struct PathTuple pt = {new_parsed_path, new_dir_name};
-
-    return pt;
-}
 
 int main(int argc, char **argv) {
     struct NamedInode *dir_p = NULL;
