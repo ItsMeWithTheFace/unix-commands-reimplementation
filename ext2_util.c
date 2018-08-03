@@ -183,7 +183,6 @@ struct NamedInode * traverse_path(char *path) {
     struct NamedInode *curr_ni_p = find_in_dir(curr_inode, ".");
     struct NamedInode curr_ni = *curr_ni_p;
 
-    char *prev_file_name;
     char *file_name = strtok(path, "/");
     while (file_name) {
         // check if curr_inode is a directory, else return error
@@ -199,8 +198,7 @@ struct NamedInode * traverse_path(char *path) {
         }
         curr_ni = *curr_ni_p;
         curr_inode = get_inode(curr_ni.inode_num, gd);
-        // save the old name for back-tracking purposes
-        prev_file_name = file_name;
+
         file_name = strtok(NULL, "/");
     }
     // If we're out of the loop, we entered a directory/file and finished traversing;
@@ -232,7 +230,7 @@ int insert_inode(int inode_type) {
         memset(new_inode, 0, sizeof(struct ext2_inode));
 
         new_inode->i_mode |= get_inode_type(inode_type);
-        new_inode->i_blocks = 2;
+        new_inode->i_blocks = 0;
         new_inode->i_links_count = 1;
         new_inode->i_size = sizeof(struct ext2_inode);
 
@@ -247,9 +245,6 @@ int insert_inode(int inode_type) {
     return 0;
 }
 
-int get_parent_inode(struct ext2_inode * inode) {
-    return 0;
-}
 
 /**
  * Returns a dir_entry with the values set to the parameter's values
@@ -299,8 +294,7 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
                         de2 = (void *) de2 + de2->rec_len;
                         
                         // this is here to solve some weird edge case of adding a dir entry
-                        // at the end where the last element is a file (weird shit happening)
-                        // NEED TO FIX LATER
+                        // at the end where the last element is a file
                         if (de2->inode == 0) {
                             int new_entry_rec_len = EXT2_BLOCK_SIZE - size;
                             struct ext2_dir_entry_2 *new_de2 = initialize_dir_entry(de2, inode_num, name, file_type, new_entry_rec_len);
@@ -329,7 +323,7 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
                 // set the dir_inode's pointer to this block
                 dir_inode->i_block[i] = block_num;
                 dir_inode->i_size += EXT2_BLOCK_SIZE;
-                dir_inode->i_blocks = dir_inode->i_blocks / (2 << sb->s_log_block_size);
+                dir_inode->i_blocks += 2;   // 1024/512
                 dir_inode->i_links_count++;
 
                 struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (disk + EXT2_BLOCK_SIZE * block_num);
@@ -362,7 +356,7 @@ void add_inode_block(struct ext2_inode *inode, int block_num) {
     for (int i = 0; i < 12; i++) {
         if (inode->i_block[i] == 0) {
             inode->i_block[i] = block_num;
-            //inode->i_blocks = inode->i_blocks / (2 << sb->s_log_block_size);
+            inode->i_blocks = inode->i_blocks + 2;
 
             return;
         }
@@ -371,3 +365,35 @@ void add_inode_block(struct ext2_inode *inode, int block_num) {
     exit(ENOSPC);
 }
 
+
+/**
+ * Splits an absolute path and returns a PathTuple. This contains
+ * the absolute path of the directory we want to insert into
+ * (PathTuple.path) and the name of the new directory (PathTuple.dir_name)
+**/
+struct PathTuple parse_directory_path(char *path) {
+    char *new_dir_name = malloc(strlen(path) + 1);
+    char *parsed_path = malloc(strlen(path) + 1);
+
+    char *token = strtok(path, "/");
+
+    while (token) {
+        strcat(parsed_path, "/");
+        strcat(parsed_path, token);
+        strcpy(new_dir_name, token);
+        token = strtok(NULL, "/");
+    }
+
+    char *new_parsed_path = malloc(strlen(parsed_path) - strlen(new_dir_name) - 1);
+    strncpy(new_parsed_path, parsed_path, strlen(parsed_path) - strlen(new_dir_name));
+
+    if (strcmp(new_parsed_path, "") == 0) {
+        strcpy(new_parsed_path, "/");
+    }
+
+    new_parsed_path[strlen(new_parsed_path)] = '\0';
+
+    struct PathTuple pt = {new_parsed_path, new_dir_name};
+
+    return pt;
+}
