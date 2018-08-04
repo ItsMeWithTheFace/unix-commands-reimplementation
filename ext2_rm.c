@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include "ext2.h"
 #include "ext2_util.h"
+#include <utils.h>
 
 /**
  * Main method for removing a file
@@ -28,6 +29,15 @@ int main(int argc, char **argv){
     if (S_ISDIR(src.inode->i_mode)){
         return EISDIR;
     }
-    
+    //Decrement ref count
+    src.inode->i_links_count--;
+    //Set dtime to current time
+    src.inode->i_dtime = get_current_time;
+    //If ref count is now 0
+    if (src.inode->i_links_count == 0){
+        //update bitmap
+        set_inode_to_zero(src.inode_num, gd);
+    }
+    //Remove dir entries
     return 0;
 }

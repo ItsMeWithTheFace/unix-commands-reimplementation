@@ -139,6 +139,11 @@ struct ext2_inode * get_inode(int inode_num, const struct ext2_group_desc *group
     return in;
 }
 
+void set_inode_to_zero(int inode_num, const struct ext2_group_desc *group_desc) {
+    struct ex2_inode *inode_from_table = get_inode(inode_num, group_desc);
+    inode_from_table->inode_num = 0;
+}
+
 /**
  * Given a directory inode (an inode where S_ISDIR(inode->i_mode) == 1), finds
  * the inode with name == file_name and returns it. Returns NULL if not found.
