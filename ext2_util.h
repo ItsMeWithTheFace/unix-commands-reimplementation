@@ -37,3 +37,4 @@ extern int allocate_inode();
 extern int allocate_block();
 extern void add_inode_block(struct ext2_inode *inode, int block_num);
 extern struct PathTuple parse_directory_path(char *path);
+extern int transfer_contents(char *contents, struct ext2_inode *file_inode);
