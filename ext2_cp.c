@@ -81,7 +81,7 @@ char * get_input_file_name(char *abs_path) {
     return file_name;
 }
 
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
     struct NamedInode *dir_p = NULL;
     struct NamedInode dir;
 

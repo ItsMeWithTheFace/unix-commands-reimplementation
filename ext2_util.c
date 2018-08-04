@@ -145,7 +145,7 @@ struct ext2_inode * get_inode(int inode_num, const struct ext2_group_desc *group
  * 
 **/
 struct NamedInode * find_in_dir(struct ext2_inode *dir_inode, char *file_name) {
-    char curr_file[EXT2_NAME_LEN];
+    static char curr_file[EXT2_NAME_LEN];
     unsigned int size = 0;
 
     for (int i = 0; i < 12; i++) {
@@ -196,11 +196,13 @@ struct NamedInode * traverse_path(char *path) {
             fprintf(stderr, "No such file or directory\n");
             exit(ENOENT);
         }
+
         curr_ni = *curr_ni_p;
         curr_inode = get_inode(curr_ni.inode_num, gd);
 
         file_name = strtok(NULL, "/");
     }
+
     // If we're out of the loop, we entered a directory/file and finished traversing;
     curr_ni_p = &curr_ni;
     return curr_ni_p;
@@ -232,7 +234,6 @@ int insert_inode(int inode_type) {
         new_inode->i_mode |= get_inode_type(inode_type);
         new_inode->i_blocks = 0;
         new_inode->i_links_count = 1;
-        new_inode->i_size = sizeof(struct ext2_inode);
 
         int time = get_current_time();
         new_inode->i_atime = time;
@@ -265,6 +266,11 @@ struct ext2_dir_entry_2 * initialize_dir_entry(struct ext2_dir_entry_2 * de2, in
 struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int inode_num, char *name, int file_type) {
     int size;
     unsigned int block_num;
+
+    if (check_exists(dir_inode, name)) {
+        fprintf(stderr, "File already exists\n");
+        exit(EEXIST);
+    }
 
     // go through the i_block array to find the allocated spaces
     for (int i = 0; i < 12; i++) {
@@ -352,6 +358,9 @@ int check_exists(struct ext2_inode * dir_inode, char *name) {
     return (!found) ? 0 : 1;
 }
 
+/**
+ * Adds a spare data block to an inode if available
+**/
 void add_inode_block(struct ext2_inode *inode, int block_num) {
     for (int i = 0; i < 12; i++) {
         if (inode->i_block[i] == 0) {
@@ -374,6 +383,11 @@ void add_inode_block(struct ext2_inode *inode, int block_num) {
 struct PathTuple parse_directory_path(char *path) {
     char *new_dir_name = malloc(strlen(path) + 1);
     char *parsed_path = malloc(strlen(path) + 1);
+
+    if (strcmp(path, "/") == 0) {
+        struct PathTuple pt = {"/", "/"};
+        return pt;
+    }
 
     char *token = strtok(path, "/");
 
