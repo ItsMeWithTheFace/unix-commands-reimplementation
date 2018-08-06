@@ -10,6 +10,9 @@
 #include "ext2_util.h"
 
 
+
+
+
 /**
  * Main method for creating a link between 2 files
  * args = (disk_img name, absolute path to file1, absolute path to file2)
@@ -22,8 +25,10 @@
 int main (int argc, char **argv) {
     int c;
     int sym_flag = 0;
+    char src_name[EXT2_NAME_LEN];
+    char dest_name[EXT2_NAME_LEN];
     struct NamedInode *src_inode = NULL;
-    struct NamedInode *dest_inode = NULL;
+    struct NamedInode *dest_dir_inode = NULL;
     struct NamedInode src, dest;
 
     if (argc < 4) {
@@ -42,12 +47,12 @@ int main (int argc, char **argv) {
     initialize_disk(argv[optind]);
     src_inode = traverse_path(argv[optind + 1]);
     src = *src_inode;
-    char src_name[EXT2_NAME_LEN];
     strcpy(src_name, src.name);
 
-    dest_inode = traverse_path(argv[optind + 2]);
-    dest = *dest_inode;
-    char dest_name[EXT2_NAME_LEN];
+    struct PathTuple dest_location = parse_directory_path(argv[optind + 2]);
+
+    dest_dir_inode = traverse_path(dest_location.path);
+    dest = *dest_dir_inode;
     strcpy(dest_name, dest.name);
 
     // Check if either path params are directories or not files
@@ -56,19 +61,28 @@ int main (int argc, char **argv) {
         return EISDIR;
     }
 
-    struct PathTuple dest_location = parse_directory_path(argv[optind + 2]);
-
     if (sym_flag) {
-        struct NamedInode *dir_inode = traverse_path(dest_location.path);
+        // check if destination is a dir...
+        if (check_exists(dest.inode, dest_location.dir_name)) {
+            struct NamedInode *in = find_in_dir(dest.inode, dest_location.dir_name);
+            if (!S_ISDIR((*in).inode->i_mode)) {
+                fprintf(stderr, "File already exists\n");
+                return EEXIST;
+            }
+/*it's my*/ dest = *in;//y
+        } else {
+            // ...or make a new file
+            strcpy(dest_name, dest_location.dir_name);
+        }
+
+
         int new_inode_num = insert_inode(TYPE_LINK);
         struct ext2_inode *new_inode = get_inode(new_inode_num, gd);
         int new_block_num = allocate_block() + 1;
         add_inode_block(new_inode, new_block_num);
+        create_new_dir_entry(dest.inode, new_inode_num, dest_name, TYPE_LINK);
 
-        create_new_dir_entry((*dir_inode).inode, new_inode_num, dest_location.dir_name, TYPE_LINK);
-
-        // add path method
-
+        transfer_contents(argv[optind + 1], new_inode);
     } else {
         // setup a hard link
         create_new_dir_entry(dest.inode, src.inode_num, src_name, TYPE_FILE);

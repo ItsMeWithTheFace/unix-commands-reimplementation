@@ -416,3 +416,29 @@ struct PathTuple parse_directory_path(char *path) {
 
     return pt;
 }
+
+/**
+ * Transfers the contents inside the file, file_name, and puts it into
+ * the data blocks of file_inode
+**/
+int transfer_contents(char *contents, struct ext2_inode *file_inode) {
+    int i = 0;
+    int curr_block_num;
+    char *block;
+
+    while(contents[i] != '\0') {
+        curr_block_num = allocate_block();
+        block = (char *) (disk + EXT2_BLOCK_SIZE * curr_block_num);
+        add_inode_block(file_inode, curr_block_num);
+
+        for (i = 0; i < EXT2_BLOCK_SIZE; i++) {
+            if (contents[i] != '\0')
+                block[i] = contents[i];
+            else
+                return 1;
+        }
+    }
+
+    block[i] = '\0';
+    return 0;
+}
