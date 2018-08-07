@@ -18,6 +18,7 @@
 int main(int argc, char **argv){
     struct NamedInode *src_inode = NULL;
     struct NamedInode src;
+    int i;
 
     if (argc < 3) {
         fprintf(stderr, "Usage: ext2_rm IMAGE_FILE PATH_TO_FILE\n");
@@ -47,9 +48,18 @@ int main(int argc, char **argv){
         // update bitmaps
         free_inode(src.inode_num);
 
-        for (int i = 0; i < 12; i++) {
+        for (i = 0; i < 12; i++) {
             if (src.inode->i_block[i] != 0) {
                 free_block(src.inode->i_block[i]);
+            }
+        }
+
+        if (i == 12) {
+            unsigned int *indirect = (unsigned int *) (disk + EXT2_BLOCK_SIZE * src.inode->i_block[i]);
+            for (int h = 0; h < EXT2_BLOCK_SIZE / sizeof(unsigned int); h++) {
+                if (indirect[h] != 0) {
+                    free_block(indirect[h]);
+                }
             }
         }
 
