@@ -129,6 +129,50 @@ int allocate_block() {
 }
 
 /**
+ * Finds the allocated inode at inode_ and sets it to free (0).
+ * Increments necessary counts.
+**/
+void free_inode(int inode_num) {
+    unsigned char *block = disk + EXT2_BLOCK_SIZE * gd->bg_inode_bitmap;
+
+    for (int i = 0; i < (sb->s_inodes_count / (sizeof(unsigned char) * 8)); i++) {
+        for (int j = 0; j < 8; j++) {
+            if (inode_num == i * 8 + j) {
+                // update the super block and group descriptor values
+                sb->s_free_inodes_count++;
+                gd->bg_free_inodes_count++;
+                // set that bit to 0
+                block[i] &= 0 << j;
+
+                return;
+            }
+        }
+    }
+}
+
+/**
+ * Finds the allocated block at block_num and sets it to free (0).
+ * Increments necessary counts.
+**/
+void free_block(int block_num) {
+    unsigned char *block = disk + EXT2_BLOCK_SIZE * gd->bg_block_bitmap;
+
+    for (int i = 0; i < (sb->s_blocks_count / (sizeof(unsigned char) * 8)); i++) {
+        for (int j = 0; j < 8; j++) {
+            if (block_num == i * 8 + j) {
+                // update the super block and group descriptor values
+                sb->s_free_blocks_count++;
+                gd->bg_free_blocks_count++;
+                // set that bit to 0
+                block[i] &= 0 << j;
+
+                return;
+            }
+        }
+    }
+}
+
+/**
  * Retrieves the full inode of an inode with the number inode_num.
  * 
 **/
@@ -137,11 +181,6 @@ struct ext2_inode * get_inode(int inode_num, const struct ext2_group_desc *group
     struct ext2_inode * in = &inode_tbl[inode_num - 1];
 
     return in;
-}
-
-void set_inode_to_zero(int inode_num, const struct ext2_group_desc *group_desc) {
-    struct ex2_inode *inode_from_table = get_inode(inode_num, group_desc);
-    inode_from_table->inode_num = 0;
 }
 
 /**
@@ -353,6 +392,45 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
     }
 
     exit(ENOSPC);
+}
+
+/**
+ * Removes a dir_entry from a directory inode. Returns EEXIST if 
+ * dir_entry with name does not exist.
+**/
+void remove_dir_entry(struct ext2_inode *dir_inode, char *name) {
+    int size;
+    unsigned int block_num;
+
+    for (int i = 0; i < 12; i++) {
+        if (dir_inode->i_block[i] != 0) {
+            block_num = dir_inode->i_block[i];
+
+            size = 0;
+            struct ext2_dir_entry_2 *prev_de2 = NULL;
+            struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (disk + EXT2_BLOCK_SIZE * block_num);
+            printf("block: %i\n", block_num);
+            while (size < dir_inode->i_size) {
+                printf("looking for shit\n");
+                if (strncmp(name, de2->name, de2->name_len) == 0) {
+                    printf("deleting\n");
+                    if (prev_de2 != NULL) {
+                        prev_de2->rec_len += de2->rec_len;
+                    }
+                    de2->inode = 0;
+
+                    return;
+                }
+
+                size += de2->rec_len;
+                de2 = (void *) de2 + de2->rec_len;
+            }
+        }
+    }
+
+    // coming soon, remove from indirect blocks
+
+    exit(EEXIST);
 }
 
 /**
