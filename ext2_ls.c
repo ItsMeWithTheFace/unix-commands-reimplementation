@@ -31,15 +31,17 @@ void read_dir_contents(struct NamedInode *ni, int dot_flag) {
             } else if (S_ISDIR(ni_d.inode->i_mode)) {
                 dir_entry = (struct ext2_dir_entry_2 *) (disk + EXT2_BLOCK_SIZE * block_num);
 
-                while((size < ni_d.inode->i_size) && dir_entry->inode) {
-                    memcpy(curr_file, dir_entry->name, dir_entry->name_len);
-                    curr_file[dir_entry->name_len] = 0;
+                while((size < ni_d.inode->i_size)) {
+                    if (dir_entry->inode) {
+                        memcpy(curr_file, dir_entry->name, dir_entry->name_len);
+                        curr_file[dir_entry->name_len] = 0;
 
-                    if (strncmp(".", curr_file, 1) == 0) {  // ignore dot directories unless dot_flag
-                        if (dot_flag == 1)
+                        if (strncmp(".", curr_file, 1) == 0) {  // ignore dot directories unless dot_flag
+                            if (dot_flag == 1)
+                                printf("%s\n", curr_file);
+                        } else {
                             printf("%s\n", curr_file);
-                    } else {
-                        printf("%s\n", curr_file);
+                        }
                     }
 
                     size += dir_entry->rec_len;
