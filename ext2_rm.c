@@ -19,6 +19,11 @@ int main(int argc, char **argv){
     struct NamedInode *src_inode = NULL;
     struct NamedInode src;
 
+    if (argc < 3) {
+        fprintf(stderr, "Usage: ext2_rm IMAGE_FILE PATH_TO_FILE\n");
+        return 1;
+    }
+
     initialize_disk(argv[1]);
 
     src_inode = traverse_path(argv[2]);
