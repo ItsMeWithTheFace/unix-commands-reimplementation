@@ -327,6 +327,8 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
             // see if there's any space in each of them
             while(size < dir_inode->i_size) {
                 if (de2->inode == 0) {
+                    if (de2->rec_len != 0)
+                        rec_len = de2->rec_len;
 
                     struct ext2_dir_entry_2 *new_de2 = initialize_dir_entry(de2, inode_num, name, file_type, rec_len);
 
@@ -338,21 +340,18 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
                     // and insert it there
                     int real_rec_len = pad_rec_len(de2->name);
                     
-                    if (rec_len <= (de2->rec_len - real_rec_len)) {
+                    // make it insert after the last dir_entry
+                    if ((rec_len <= (de2->rec_len - real_rec_len)) && (size + de2->rec_len >= EXT2_BLOCK_SIZE)) {
                         de2->rec_len = real_rec_len;
                         size += de2->rec_len;
                         de2 = (void *) de2 + de2->rec_len;
-                        
-                        // this is here to solve some weird edge case of adding a dir entry
-                        // at the end where the last element is a file
-                        if (de2->inode == 0) {
-                            int new_entry_rec_len = EXT2_BLOCK_SIZE - size;
-                            struct ext2_dir_entry_2 *new_de2 = initialize_dir_entry(de2, inode_num, name, file_type, new_entry_rec_len);
 
-                            dir_inode->i_links_count++;
+                        int new_entry_rec_len = EXT2_BLOCK_SIZE - size;
+                        struct ext2_dir_entry_2 *new_de2 = initialize_dir_entry(de2, inode_num, name, file_type, new_entry_rec_len);
 
-                            return new_de2;
-                        }
+                        dir_inode->i_links_count++;
+
+                        return new_de2;
                     }
                 }
 
