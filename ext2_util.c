@@ -425,7 +425,7 @@ void remove_dir_entry(struct ext2_inode *dir_inode, char *name) {
             }
         }
     }
-    printf("hey\n");
+
     // remove from indirect blocks
     if (i == 12) {
         unsigned int *indirect = (unsigned int *) (disk + EXT2_BLOCK_SIZE * dir_inode->i_block[i]);
