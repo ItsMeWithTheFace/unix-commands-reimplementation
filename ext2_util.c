@@ -400,20 +400,18 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
 **/
 void remove_dir_entry(struct ext2_inode *dir_inode, char *name) {
     int size;
+    int i;
     unsigned int block_num;
 
-    for (int i = 0; i < 12; i++) {
+    for (i = 0; i < 12; i++) {
         if (dir_inode->i_block[i] != 0) {
             block_num = dir_inode->i_block[i];
 
             size = 0;
             struct ext2_dir_entry_2 *prev_de2 = NULL;
             struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (disk + EXT2_BLOCK_SIZE * block_num);
-            printf("block: %i\n", block_num);
             while (size < dir_inode->i_size) {
-                printf("looking for shit\n");
                 if (strncmp(name, de2->name, de2->name_len) == 0) {
-                    printf("deleting\n");
                     if (prev_de2 != NULL) {
                         prev_de2->rec_len += de2->rec_len;
                     }
@@ -427,8 +425,33 @@ void remove_dir_entry(struct ext2_inode *dir_inode, char *name) {
             }
         }
     }
+    printf("hey\n");
+    // remove from indirect blocks
+    if (i == 12) {
+        unsigned int *indirect = (unsigned int *) (disk + EXT2_BLOCK_SIZE * dir_inode->i_block[i]);
+        for (int h = 0; h < EXT2_BLOCK_SIZE / sizeof(unsigned int); h++) {
+            if (indirect[h] != 0) {
+                block_num = indirect[h];
+                
+                size = 0;
+                struct ext2_dir_entry_2 *prev_de2 = NULL;
+                struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (disk + EXT2_BLOCK_SIZE * block_num);
+                while (size < dir_inode->i_size) {
+                    if (strncmp(name, de2->name, de2->name_len) == 0) {
+                        if (prev_de2 != NULL) {
+                            prev_de2->rec_len += de2->rec_len;
+                        }
+                        de2->inode = 0;
 
-    // coming soon, remove from indirect blocks
+                        return;
+                    }
+
+                    size += de2->rec_len;
+                    de2 = (void *) de2 + de2->rec_len;
+                }
+            }
+        }
+    }
 
     exit(EEXIST);
 }
@@ -445,12 +468,24 @@ int check_exists(struct ext2_inode * dir_inode, char *name) {
  * Adds a spare data block to an inode if available
 **/
 void add_inode_block(struct ext2_inode *inode, int block_num) {
-    for (int i = 0; i < 12; i++) {
+    int i;
+    for (i = 0; i < 12; i++) {
         if (inode->i_block[i] == 0) {
             inode->i_block[i] = block_num;
             inode->i_blocks = inode->i_blocks + 2;
 
             return;
+        }
+    }
+
+    // taking care of indirect blocks
+    if (i == 12) {
+        unsigned int *indirect = (unsigned int *) (disk + EXT2_BLOCK_SIZE * inode->i_block[i]);
+        for (int h = 0; h < EXT2_BLOCK_SIZE / sizeof(unsigned int); h++) {
+            if (indirect[h] == 0) {
+                indirect[h] = block_num;
+                inode->i_blocks = inode->i_blocks + 2;
+            }
         }
     }
 
