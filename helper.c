@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include "ext2_util.h"
+#include "helper.h"
 
 int fd;
 unsigned char *disk;
