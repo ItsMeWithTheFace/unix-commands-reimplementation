@@ -309,6 +309,7 @@ struct ext2_dir_entry_2 * initialize_dir_entry(struct ext2_dir_entry_2 * de2, in
 **/
 struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int inode_num, char *name, int file_type) {
     int size;
+    int i;
     unsigned int block_num;
 
     if (check_exists(dir_inode, name)) {
@@ -317,7 +318,7 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
     }
 
     // go through the i_block array to find the allocated spaces
-    for (int i = 0; i < 12; i++) {
+    for (i = 0; i < 12; i++) {
         if (dir_inode->i_block[i] != 0) {
             block_num = dir_inode->i_block[i];
 
@@ -361,13 +362,11 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
         }
     }
 
-    // coming soon, go through the indirect blocks
-
     // if not, allocate space
     block_num = allocate_block() + 1;
     if (block_num > 0) {
         // create the new dir_entry
-        for (int i = 0; i < 12; i++) {
+        for (i = 0; i < 12; i++) {
             if (dir_inode->i_block[i] == 0) {
                 // set the dir_inode's pointer to this block
                 dir_inode->i_block[i] = block_num;
@@ -387,7 +386,29 @@ struct ext2_dir_entry_2 * create_new_dir_entry(struct ext2_inode *dir_inode, int
             }
         }
 
-        // coming soon, dealing with indirect blocks
+        // deal with indirect blocks
+        if (i == 12) {
+            unsigned int *indirect = (unsigned int *) (disk + EXT2_BLOCK_SIZE * dir_inode->i_block[i]);
+            for (int h = 0; h < EXT2_BLOCK_SIZE / sizeof(unsigned int); h++) {
+                if (indirect[h] == 0) {
+                    // set the dir_inode's pointer to this block
+                    indirect[h] = block_num;
+                    dir_inode->i_size += EXT2_BLOCK_SIZE;
+                    dir_inode->i_blocks += 2;   // 1024/512
+                    dir_inode->i_links_count++;
+
+                    struct ext2_dir_entry_2 *de2 = (struct ext2_dir_entry_2 *) (disk + EXT2_BLOCK_SIZE * block_num);
+                    struct ext2_dir_entry_2 *new_de2 = initialize_dir_entry(de2, inode_num, name, file_type, EXT2_BLOCK_SIZE);
+                    de2->inode = inode_num;
+                    strcpy(de2->name, name);
+                    de2->name_len = strlen(name);
+                    de2->file_type = file_type;
+                    de2->rec_len = EXT2_BLOCK_SIZE;
+
+                    return new_de2;
+                }
+            }
+        }
     }
 
     exit(ENOSPC);
