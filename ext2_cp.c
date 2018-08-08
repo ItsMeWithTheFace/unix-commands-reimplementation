@@ -11,10 +11,23 @@
 
 
 /**
+ * Checks if a file exists
+**/
+int check_file_exists(const char *file_name) {
+    struct stat st;
+    stat(file_name, &st);
+    return S_ISREG(st.st_mode);
+}
+
+/**
  * Retrieves the contents of a file with file_name
 **/
 char * get_file_contents(char *file_name) {
-    FILE *file = fopen(file_name, "r");
+    FILE *file = NULL;
+    if (check_file_exists(file_name))
+        file = fopen(file_name, "r");
+    else
+        fprintf(stderr, "Invalid path to file\n");
     char *contents = 0;
     long length;
 

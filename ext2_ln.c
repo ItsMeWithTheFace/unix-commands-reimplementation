@@ -9,10 +9,6 @@
 #include "ext2.h"
 #include "ext2_util.h"
 
-
-
-
-
 /**
  * Main method for creating a link between 2 files
  * args = (disk_img name, absolute path to file1, absolute path to file2)
@@ -61,21 +57,21 @@ int main (int argc, char **argv) {
         return EISDIR;
     }
 
-    if (sym_flag) {
-        // check if destination is a dir...
-        if (check_exists(dest.inode, dest_location.dir_name)) {
-            struct NamedInode *in = find_in_dir(dest.inode, dest_location.dir_name);
-            if (!S_ISDIR((*in).inode->i_mode)) {
-                fprintf(stderr, "File already exists\n");
-                return EEXIST;
-            }
-/*it's my*/ dest = *in;//y
-        } else {
-            // ...or make a new file
-            strcpy(dest_name, dest_location.dir_name);
+     // check if destination is a dir...
+    if (check_exists(dest.inode, dest_location.dir_name)) {
+        struct NamedInode *in = find_in_dir(dest.inode, dest_location.dir_name);
+        if (!S_ISDIR((*in).inode->i_mode)) {
+            fprintf(stderr, "File already exists\n");
+            return EEXIST;
         }
+        dest = *in;
+        strcpy(dest_name, src_name);
+    } else {
+        // ...or make a new file
+        strcpy(dest_name, dest_location.dir_name);
+    }
 
-
+    if (sym_flag) {
         int new_inode_num = insert_inode(TYPE_LINK);
         struct ext2_inode *new_inode = get_inode(new_inode_num, gd);
         int new_block_num = allocate_block() + 1;
@@ -85,7 +81,7 @@ int main (int argc, char **argv) {
         transfer_contents(argv[optind + 1], new_inode);
     } else {
         // setup a hard link
-        create_new_dir_entry(dest.inode, src.inode_num, src_name, TYPE_FILE);
+        create_new_dir_entry(dest.inode, src.inode_num, dest_name, TYPE_FILE);
     }
 
     return 0;
