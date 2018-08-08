@@ -1,0 +1,34 @@
+Team Members
+    Rakin Uddin (uddinrak)
+    Kareem Sobhy Mohamed (moha1097)
+    Stephen Luc (lucsteph)
+
+Project Notes
+ext2_cp
+    The way we implemented this function was that you can take in 
+    an image file, a local path to a source file and a path on the image to cp to.
+    The path on the image can be a directory, resulting in a new file with the
+    same name as the source file. The path could also be a path to a non-existent
+    file, resulting in a file being created in that directory under that specified name.
+
+    Some examples:
+    ./ext2_cp onefile.img test.txt /testing
+
+    This will copy the contents from test.txt into a new file called testing, since
+    testing does not exist.
+
+    ./ext2_cp twolevel.img test.txt /level1/
+
+    This will copy the contents from test.txt into a new file called test.txt, since
+    level1 exists and is a directory.
+
+    ./ext2_cp twolevel.img test.txt /level1/level2/testing
+
+    This copies the contents from test.txt into a new file called testing inside
+    level2, since that does not exist yet. Note that /level1/level2/ must be a valid
+    path for this to work.
+
+ext2_ln
+    Similar to ext2_cp, the user can specify a path to a directory or a new file as the
+    third parameter and it will use the same naming schemes as in ext2_cp.
+
