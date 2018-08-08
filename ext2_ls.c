@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "ext2.h"
-#include "ext2_util.h"
+#include "helper.h"
 
 /**
  * Prints the contents of a directory or just the name of a file/symlink.

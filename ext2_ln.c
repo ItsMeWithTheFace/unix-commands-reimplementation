@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "ext2.h"
-#include "ext2_util.h"
+#include "helper.h"
 
 /**
  * Main method for creating a link between 2 files
